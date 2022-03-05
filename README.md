@@ -7,7 +7,7 @@ How to install on Rapsberry PI
 1) Install the latest version of the Raspberry PI OS Debian version: 11 (bullseye)
 2) sudo apt-get install libwebsockets-dev
 3) sudo apt-get install ftp-upload
-4) Copy the zip file from git in to the home directory
+4) Copy the zip file from git into the home directory
 5) Unzip the file
 6) cd SondeGround/Release
 7) type make
