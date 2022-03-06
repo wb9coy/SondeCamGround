@@ -1,0 +1,10 @@
+[Unit]
+Description=sondeGround Service
+After=multi-user.target
+
+[Service]
+WorkingDirectory=/home/pi/SondeGround/Release
+ExecStart=/home/pi/SondeGround/Release/SondeGround
+
+[Install]
+WantedBy=multi-user.target
