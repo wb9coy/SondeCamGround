@@ -147,7 +147,7 @@ static int callback_hab( struct lws *wsi, enum lws_callback_reasons reason, void
 			if(QStatus != 0)
 			{
 				memcpy(&packetType,&webClientThreadQData.buf[0],1);
-				//printf("Packet Type %d\n", packetType);
+				printf("Packet Type %d\n", packetType);
 
 				switch(packetType)
 				{
@@ -169,6 +169,12 @@ static int callback_hab( struct lws *wsi, enum lws_callback_reasons reason, void
 					case HUM:
 						break;
 					case PRES:
+						break;
+					case CW_ID:
+						//printf("CW ID %s\n",webHABPacketData.webData);
+						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
+						//printf("lws_write %s\n",webHABPacketData.webData);
+						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
 						break;
 					case BATT_INFO:
 						//printf("WSC BATT_INFO\n");
