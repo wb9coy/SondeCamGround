@@ -62,8 +62,11 @@ void *webClientThreadFunc(void *x_void_ptr)
 
 		while( (webClientQ->size > 0) && (connectedToServer == 1))
 		{
-			lws_callback_on_writable( web_socket );
-			lws_service( context, 1000);
+			if(web_socket)
+			{
+				lws_callback_on_writable( web_socket );
+				lws_service( context, 1000);
+			}
 		}
 	}
 
@@ -248,14 +251,22 @@ int connectToServer()
 	ccinfo.origin = "origin";
 	ccinfo.protocol = protocols[PROTOCOL_HAB].name;
 	//printf("connectToServer Before lws_client_connect_via_info(&ccinfo) \n");
+	web_socket = NULL;
 	web_socket = lws_client_connect_via_info(&ccinfo);
-	ccinfo.parent_wsi = web_socket;
-	//printf("connectToServer Before lws_service( context, 10000 \n");
-	lws_service( context, 1000);
-
 	if(web_socket)
 	{
-		connectStatus = 1;
+		ccinfo.parent_wsi = web_socket;
+		//printf("connectToServer Before lws_service( context, 10000 \n");
+		lws_service( context, 1000);
+
+		if(web_socket)
+		{
+			connectStatus = 1;
+		}
+	}
+	else
+	{
+		connectStatus = 0;
 	}
 
 
