@@ -31,6 +31,7 @@ int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 	}
 	else
 	{
+		memset(&HABPacketGPSData,'\0',sizeof(gpsGGAData));
 		memcpy(&HABPacketGPSData,GPSPacket,len);
 		if(HABPacketGPSData.gpsDataLen > MAX_GPS_BUF_LEN)
 		{
@@ -42,6 +43,7 @@ int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 			case GPS_GGA_1:
 			{
 				memset(gpsGGAData,'\0',sizeof(gpsGGAData));
+				memset(gpsSentence,'\0',sizeof(gpsSentence));
 				memcpy(gpsGGAData,HABPacketGPSData.gpsData,HABPacketGPSData.gpsDataLen);
 				gpsGGADataLen = HABPacketGPSData.gpsDataLen;
 				break;
@@ -50,22 +52,35 @@ int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 			{
 				if( (HABPacketGPSData.gpsDataLen + MAX_GPS_BUF_LEN) > MAX_GPS_NMEA_SIZE)
 				{
+					memset(gpsGGAData,'\0',sizeof(gpsGGAData));
+					memset(gpsSentence,'\0',sizeof(gpsSentence));
 					printf("ERROR GPS_GGA_2 len\n");
 					result = 0;
 				}
 				else
 				{
-					gpsGGADataLen = HABPacketGPSData.gpsDataLen + gpsGGADataLen;
-					memcpy(&gpsGGAData[MAX_GPS_BUF_LEN],HABPacketGPSData.gpsData,HABPacketGPSData.gpsDataLen);
-					memcpy(gpsSentence,gpsGGAData,gpsGGADataLen);
-					gpsSentenceLen = gpsGGADataLen;
-					gpsGGADataLen = 0;
+					if(gpsGGADataLen == 0)
+					{
+						memset(gpsGGAData,'\0',sizeof(gpsGGAData));
+						memset(gpsSentence,'\0',sizeof(gpsSentence));
+						printf("ERROR GPS_GGA_2 len equal 0\n");
+						result = 0;
+					}
+					else
+					{
+						gpsGGADataLen = HABPacketGPSData.gpsDataLen + gpsGGADataLen;
+						memcpy(&gpsGGAData[MAX_GPS_BUF_LEN],HABPacketGPSData.gpsData,HABPacketGPSData.gpsDataLen);
+						memcpy(gpsSentence,gpsGGAData,gpsGGADataLen);
+						gpsSentenceLen = gpsGGADataLen;
+						gpsGGADataLen = 0;
+					}
 				}
 				break;
 			}
 			case GPS_RMC_1:
 			{
 				memset(gpsRMCData,'\0',sizeof(gpsRMCData));
+				memset(gpsSentence,'\0',sizeof(gpsSentence));
 				memcpy(gpsRMCData,HABPacketGPSData.gpsData,HABPacketGPSData.gpsDataLen);
 				gpsRMCDataLen = HABPacketGPSData.gpsDataLen;
 				break;
@@ -74,16 +89,28 @@ int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 			{
 				if( (HABPacketGPSData.gpsDataLen + MAX_GPS_BUF_LEN) > MAX_GPS_NMEA_SIZE)
 				{
+					memset(gpsGGAData,'\0',sizeof(gpsGGAData));
+					memset(gpsSentence,'\0',sizeof(gpsSentence));
 					printf("ERROR GPS_GGA_2 len\n");
 					result = 0;
 				}
 				else
 				{
-					gpsRMCDataLen = HABPacketGPSData.gpsDataLen + gpsRMCDataLen;
-					memcpy(&gpsRMCData[MAX_GPS_BUF_LEN],HABPacketGPSData.gpsData,HABPacketGPSData.gpsDataLen);
-					memcpy(gpsSentence,gpsRMCData,gpsRMCDataLen);
-					gpsSentenceLen = gpsRMCDataLen;
-					gpsRMCDataLen = 0;
+					if(gpsRMCDataLen == 0)
+					{
+						memset(gpsRMCData,'\0',sizeof(gpsRMCData));
+						memset(gpsSentence,'\0',sizeof(gpsSentence));
+						printf("ERROR GPS_RMC_2 len equal 0\n");
+						result = 0;
+					}
+					else
+					{
+						gpsRMCDataLen = HABPacketGPSData.gpsDataLen + gpsRMCDataLen;
+						memcpy(&gpsRMCData[MAX_GPS_BUF_LEN],HABPacketGPSData.gpsData,HABPacketGPSData.gpsDataLen);
+						memcpy(gpsSentence,gpsRMCData,gpsRMCDataLen);
+						gpsSentenceLen = gpsRMCDataLen;
+						gpsRMCDataLen = 0;
+					}
 				}
 				break;
 			}

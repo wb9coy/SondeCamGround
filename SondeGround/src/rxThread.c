@@ -176,12 +176,6 @@ int rxThreadDispatchPacket(unsigned char *rxThreadDispatchPacketBuf,int len)
 				printf("ERROR Failed processSensorPacket type %d\n",packetType);
 			}
 			break;
-		case HUM:
-			printf("HUM\n");
-			break;
-		case PRES:
-			printf("PRES\n");
-			break;
 		case INFO_DATA:
 			status = processInfoPacket(rxThreadDispatchPacketBuf,len);
 			if(status != 1)

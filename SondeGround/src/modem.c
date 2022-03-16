@@ -36,7 +36,7 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 	rssiVal = getRSSI(getSPID());
 	rxThreadData.rssi = rssiVal/2.0-22.0;
 
-	if(rxThreadData.rssi < 97.00)
+	if(rxThreadData.rssi < 95.00)
 	{
 
 		for(int i=0; i < MTU_SIZE; i++)
@@ -119,7 +119,7 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 			case GPS_RMC_1:
 			case GPS_RMC_2:
 			{
-				rxThreadData.size = sizeof(struct HABPacketGPSDataType);
+				rxThreadData.size = MAX_GPS_BUF_LEN +3;
 				break;
 			}
 			case START_IMAGE:
@@ -141,6 +141,7 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 				{
 					printf("%x ",rxThreadData.buf[i]);
 				}
+				printf("\n");
 				goodPacket = 0;
 			}
 		}
@@ -235,8 +236,8 @@ int modemSetup(dictionary *ini)
 	modem.eth.resetGpioN      = iniparser_getint(ini,"modem:resetGpioN",4);
 	modem.eth.freq            = iniparser_getint(ini,"modem:freq",434200000);
 	modem.eth.freqofs         = iniparser_getint(ini,"modem:offset",0);
-	modem.eth.agcbw           = 25000;
-	modem.eth.rxbw            = 12600;
+	modem.eth.agcbw           = 12500;
+	modem.eth.rxbw            = 200000;
 
 
 	status = resetChip(modem.eth.resetGpioN);
@@ -292,7 +293,7 @@ int modemSetup(dictionary *ini)
 	}
 
 	// Enable auto-AFC, auto-AGC, RX Trigger by preamble
-	status = setRxConf(modem.spid,0x1F);
+	status = setRxConf(modem.spid,0x1E);
 	if(status != 1)
 	{
 		printf("Setting RX Config FAILED\n");

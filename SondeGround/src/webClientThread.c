@@ -27,35 +27,167 @@ static struct lws_client_connect_info ccinfo = {0};
 
 int connectedToServer = 0;
 
+static int callback_hab( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
+{
+	int QStatus;
+	uint8_t   packetType;
+	QelementData webClientThreadQData;
+	//printf("Reason %d\n",reason);
+	switch( reason )
+	{
+		case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
+			break;
+		case LWS_CALLBACK_CLIENT_ESTABLISHED:
+			lws_callback_on_writable( wsi );
+			connectedToServer = 1;
+			printf("Web Socket Connected to %s\n",ccinfo.address);
+			break;
+		case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
+			lws_callback_on_writable( wsi );
+			connectedToServer = 1;
+			printf("Web Socket Connected to %s\n",ccinfo.address);
+			break;
+		case LWS_CALLBACK_CLIENT_RECEIVE:
+			/* Handle incomming messages here. */
+			break;
+
+		case LWS_CALLBACK_CLIENT_WRITEABLE:
+		{
+			struct webHABPacketDataType 	webHABPacketData;
+
+			pthread_mutex_lock (&webClientQmut);
+			QStatus = Dequeue(webClientQ,&webClientThreadQData);
+			pthread_mutex_unlock (&webClientQmut);
+			if(QStatus != 0)
+			{
+				memcpy(&packetType,&webClientThreadQData.buf[0],1);
+				//printf("Packet Type %d\n", packetType);
+
+				switch(packetType)
+				{
+					case GPS_GGA_2:
+					case GPS_RMC_2:
+						//printf("WSC GPS\n");
+						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
+						//printf("lws_write %s\n",webHABPacketData.webData);
+						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
+	//					printf("lws len %d\n",webHABPacketGPSData.gpsDataLen);
+	//					printf("lws %s\n",webHABPacketGPSData.gpsData);
+						break;
+					case INT_TEMP:
+						//printf("WSC INT_TEMP\n");
+						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
+						//printf("lws_write %s\n",webHABPacketData.webData);
+						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
+						break;
+					case CW_ID:
+						//printf("CW ID %s\n",webHABPacketData.webData);
+						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
+						//printf("lws_write %s\n",webHABPacketData.webData);
+						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
+						break;
+					case BATT_INFO:
+						//printf("WSC BATT_INFO\n");
+						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
+						//printf("lws_write %s\n",webHABPacketData.webData);
+						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
+						break;
+					case RSSI_INFO:
+						//printf("WSC BATT_INFO\n");
+						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
+						//printf("lws_write %s\n",webHABPacketData.webData);
+						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
+						break;
+					case PING:
+						//printf("WSC PING\n");
+						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
+						//printf("lws_write %s\n",webHABPacketData.webData);
+						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
+						break;
+				}
+				free(webClientThreadQData.buf);
+			}
+			break;
+		}
+
+		case LWS_CALLBACK_CLOSED:
+		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+			web_socket = NULL;
+			connectedToServer = 0;
+			break;
+		case LWS_CALLBACK_CHANGE_MODE_POLL_FD:
+		case LWS_CALLBACK_LOCK_POLL:
+		case LWS_CALLBACK_UNLOCK_POLL:
+			break;
+		default:
+			break;
+	}
+
+	return 0;
+}
+
+enum protocols
+{
+	PROTOCOL_HAB = 0,
+	PROTOCOL_COUNT
+};
+
+static struct lws_protocols protocols[] =
+{
+	{
+		"hav-protocol",
+		callback_hab,
+		0,
+		HAB_RX_BUFFER_BYTES,
+	},
+	{ NULL, NULL, 0, 0 } /* terminator */
+};
+
+
 
 void *webClientThreadFunc(void *x_void_ptr)
 {
-	int webClientQueueSize =10000;
+	int webClientQueueSize =100;
 	int connectStatus = 0;
 
 	printf("Start Web Client Thread  \n");
 	webClientQ = createQueue(webClientQueueSize);
+
+	memset( &info, 0, sizeof(info) );
+
+	info.port = CONTEXT_PORT_NO_LISTEN;
+	info.protocols = protocols;
+	info.gid = -1;
+	info.uid = -1;
+
+	context = lws_create_context( &info );
+
+	ccinfo.context = context;
+	ccinfo.address = getGatewayServerIPAddress();
+	ccinfo.port = getGatewayServerPort();
+	ccinfo.path = "/";
+	ccinfo.host = lws_canonical_hostname( context );
+	ccinfo.origin = "origin";
+	ccinfo.protocol = protocols[PROTOCOL_HAB].name;
+	ccinfo.parent_wsi = web_socket;
 
 	webClientThreadActive = 1;
 	while (webClientThreadActive)
 	{
 		while(connectedToServer == 0)
 		{
-			connectStatus = connectToServer();
 			printf("Trying to connect to %s\n",ccinfo.address);
-			if(connectStatus)
-			{
-				lws_service( context, 10000 );
-			}
-			if(connectedToServer)
-			{
-				printf("Web Socket Connected to %s\n",ccinfo.address);
-			}
-			else
+			connectStatus = connectToServer();
+			if(connectStatus == 0)
 			{
 				sleep(10);
 			}
+			else
+			{
+				lws_service( context, 10000);
+			}
 		}
+
 		pthread_mutex_lock (&webClientThreadFuncConMut);
 		pthread_cond_wait(&webClientQcon, &webClientThreadFuncConMut);
 		pthread_mutex_unlock (&webClientThreadFuncConMut);
@@ -117,170 +249,23 @@ int getwebClientQueueSize()
 	return webClientQ->size;
 }
 
-
-static int callback_hab( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
-{
-	int QStatus;
-	uint8_t   packetType;
-	QelementData webClientThreadQData;
-	//printf("Reason %d\n",reason);
-	switch( reason )
-	{
-		case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
-			break;
-		case LWS_CALLBACK_CLIENT_ESTABLISHED:
-			lws_callback_on_writable( wsi );
-			connectedToServer = 1;
-			break;
-		case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
-			lws_callback_on_writable( wsi );
-			connectedToServer = 1;
-			break;
-		case LWS_CALLBACK_CLIENT_RECEIVE:
-			/* Handle incomming messages here. */
-			break;
-
-		case LWS_CALLBACK_CLIENT_WRITEABLE:
-		{
-			struct webHABPacketDataType 	webHABPacketData;
-
-			pthread_mutex_lock (&webClientQmut);
-			QStatus = Dequeue(webClientQ,&webClientThreadQData);
-			pthread_mutex_unlock (&webClientQmut);
-			if(QStatus != 0)
-			{
-				memcpy(&packetType,&webClientThreadQData.buf[0],1);
-				printf("Packet Type %d\n", packetType);
-
-				switch(packetType)
-				{
-					case GPS_GGA_2:
-					case GPS_RMC_2:
-						//printf("WSC GPS\n");
-						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
-						//printf("lws_write %s\n",webHABPacketData.webData);
-						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
-	//					printf("lws len %d\n",webHABPacketGPSData.gpsDataLen);
-	//					printf("lws %s\n",webHABPacketGPSData.gpsData);
-						break;
-					case INT_TEMP:
-						//printf("WSC INT_TEMP\n");
-						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
-						//printf("lws_write %s\n",webHABPacketData.webData);
-						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
-						break;
-					case HUM:
-						break;
-					case PRES:
-						break;
-					case CW_ID:
-						//printf("CW ID %s\n",webHABPacketData.webData);
-						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
-						//printf("lws_write %s\n",webHABPacketData.webData);
-						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
-						break;
-					case BATT_INFO:
-						//printf("WSC BATT_INFO\n");
-						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
-						//printf("lws_write %s\n",webHABPacketData.webData);
-						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
-						break;
-					case RSSI_INFO:
-						//printf("WSC BATT_INFO\n");
-						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
-						//printf("lws_write %s\n",webHABPacketData.webData);
-						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
-						break;
-				}
-				free(webClientThreadQData.buf);
-			}
-			break;
-		}
-
-		case LWS_CALLBACK_CLOSED:
-		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-			web_socket = NULL;
-			connectedToServer = 0;
-			break;
-		case LWS_CALLBACK_CHANGE_MODE_POLL_FD:
-		case LWS_CALLBACK_LOCK_POLL:
-		case LWS_CALLBACK_UNLOCK_POLL:
-			break;
-		default:
-			break;
-	}
-
-	return 0;
-}
-
-enum protocols
-{
-	PROTOCOL_HAB = 0,
-	PROTOCOL_COUNT
-};
-
-static struct lws_protocols protocols[] =
-{
-	{
-		"hav-protocol",
-		callback_hab,
-		0,
-		HAB_RX_BUFFER_BYTES,
-	},
-	{ NULL, NULL, 0, 0 } /* terminator */
-};
-
 int connectToServer()
 {
 
 	int connectStatus = 0;
-	memset( &info, 0, sizeof(info) );
 
-	info.port = CONTEXT_PORT_NO_LISTEN;
-	info.protocols = protocols;
-	info.gid = -1;
-	info.uid = -1;
-
-	context = lws_create_context( &info );
-
-	ccinfo.context = context;
-	ccinfo.address = getGatewayServerIPAddress();
-	ccinfo.port = getGatewayServerPort();
-	ccinfo.path = "/";
-	ccinfo.host = lws_canonical_hostname( context );
-	ccinfo.origin = "origin";
-	ccinfo.protocol = protocols[PROTOCOL_HAB].name;
 	//printf("connectToServer Before lws_client_connect_via_info(&ccinfo) \n");
-	web_socket = NULL;
 	web_socket = lws_client_connect_via_info(&ccinfo);
 	if(web_socket)
 	{
-		ccinfo.parent_wsi = web_socket;
 		//printf("connectToServer Before lws_service( context, 10000 \n");
 		lws_service( context, 1000);
-
-		if(web_socket)
-		{
-			connectStatus = 1;
-		}
+		connectStatus = 1;
 	}
 	else
 	{
 		connectStatus = 0;
 	}
-
-
-//	lws_service( context, /* timeout_ms = */ 250 );
-//
-//	strcpy(geneBuff,"Hello World");
-//	while( loop)
-//	{
-//		//lws_write( web_socket, geneBuff, 11, LWS_WRITE_TEXT );
-//		lws_callback_on_writable( web_socket );
-//		lws_service( context, /* timeout_ms = */ 250 );
-//	}
-//
-//	lws_context_destroy( context );
 
 	return connectStatus;
 }

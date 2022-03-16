@@ -7,20 +7,6 @@
 #include "checksum.h"
 #include "packetDefs.h"
 
-static FILE *fptr[256];
-static FILE *fptrSeq[256];
-static int firstTime = 1;
-
-void processImageFilePacketInit()
-{
-	for(int i = 0; i < 256;i++)
-	{
-		fptr[i]    = NULL;
-		fptrSeq[i] = NULL;
-	}
-
-}
-
 int processImageFilePacket(unsigned char * imagefilePacket, int len, int packetType)
 {
 	int status = 1;
@@ -33,16 +19,34 @@ int processImageFilePacket(unsigned char * imagefilePacket, int len, int packetT
 	struct HABPacketImageSeqEndType	  HABPacketImageSeqEnd;
 
 	static int prevSeq = 0;
+	static FILE *fptr[256];
+	static FILE *fptrSeq[256];
+	static int firstTime = 1;
 
 	if(firstTime)
 	{
-		processImageFilePacketInit();
+		for(int i = 0; i < 256;i++)
+		{
+			fptr[i]    = NULL;
+			fptrSeq[i] = NULL;
+		}
 		firstTime = 0;
 	}
 
 	switch(packetType)
 	{
 		case START_IMAGE:
+			printf("START_IMAGE File Cleanup Begin\n");
+			prevSeq = 0;
+
+			for(int i = 0; i < 256;i++)
+			{
+				fptr[i]    = NULL;
+				fptrSeq[i] = NULL;
+			}
+
+			printf("START_IMAGE File Cleanup End\n");
+
 			if(len == sizeof(HABPacketImageStart))
 			{
 				memcpy(&HABPacketImageStart,imagefilePacket,len);
@@ -59,22 +63,8 @@ int processImageFilePacket(unsigned char * imagefilePacket, int len, int packetT
 						status = 0;
 					}
 				}
-
 				if(status)
 				{
-					for(int i = 0; i < 256;i++)
-					{
-						if (fptr[i])
-						{
-							fclose(fptr[i]);
-							fptr[i] = NULL;
-						}
-						if (fptrSeq[i])
-						{
-							fclose(fptrSeq[i]);
-							fptrSeq[i] = NULL;
-						}
-					}
 					setImageFileID(HABPacketImageStart.imageFileID);
 					printf("packetType = %d\n",HABPacketImageStart.packetType);
 					printf("imageFileID = %d\n",getImageFileID());
@@ -98,8 +88,6 @@ int processImageFilePacket(unsigned char * imagefilePacket, int len, int packetT
 					{
 						fwrite(&HABPacketImageSeqStart, 1, sizeof(HABPacketImageSeqStart), fptrSeq[HABPacketImageSeqStart.imageFileID]);
 					}
-
-					prevSeq = 0;
 				}
 			}
 			else
@@ -111,7 +99,8 @@ int processImageFilePacket(unsigned char * imagefilePacket, int len, int packetT
 			break;
 
 		case IMAGE_DATA:
-			if(len == sizeof(HABPacketImageData))
+			memcpy(&HABPacketImageData,imagefilePacket,len);
+			if(HABPacketImageData.imageDataLen <=  MAX_IMG_BUF_LEN)
 			{
 				memcpy(&HABPacketImageData,imagefilePacket,len);
 				crc16 = crc_16((unsigned char *)&HABPacketImageData,len - sizeof(HABPacketImageData.crc16));
@@ -129,8 +118,14 @@ int processImageFilePacket(unsigned char * imagefilePacket, int len, int packetT
 						{
 							printf("#######################  SEQ ERROR %d %d\n",prevSeq, HABPacketImageData.imageSeqnum);
 						}
-						fwrite(HABPacketImageData.imageData, 1, HABPacketImageData.imageDataLen, fptr[HABPacketImageData.imageFileID]);
-
+						if( ftell(fptr[HABPacketImageData.imageFileID]) >=0)
+						{
+							fwrite(HABPacketImageData.imageData, 1, HABPacketImageData.imageDataLen, fptr[HABPacketImageData.imageFileID]);
+						}
+						else
+						{
+							printf("ERROR file for file_id %d not open\n",HABPacketImageData.imageFileID);
+						}
 						printf("IMAGE_DATA Seq %d\n",HABPacketImageData.imageSeqnum);
 						prevSeq = HABPacketImageData.imageSeqnum;
 
@@ -142,7 +137,15 @@ int processImageFilePacket(unsigned char * imagefilePacket, int len, int packetT
 							HABPacketImageSeqData.imageDataLen = HABPacketImageData.imageDataLen;
 							HABPacketImageSeqData.gwID         = getGWID();
 							memcpy(HABPacketImageSeqData.imageData,HABPacketImageData.imageData,HABPacketImageData.imageDataLen);
-							fwrite(&HABPacketImageSeqData, 1, sizeof(HABPacketImageSeqData), fptrSeq[HABPacketImageSeqData.imageFileID]);
+							if( ftell(fptrSeq[HABPacketImageSeqData.imageFileID]) >=0)
+							{
+								fwrite(&HABPacketImageSeqData, 1, sizeof(HABPacketImageSeqData), fptrSeq[HABPacketImageSeqData.imageFileID]);
+							}
+							else
+							{
+								printf("ERROR seq file for file_id %d not open\n",HABPacketImageData.imageFileID);
+							}
+
 						}
 					}
 				}
@@ -185,29 +188,34 @@ int processImageFilePacket(unsigned char * imagefilePacket, int len, int packetT
 						}
 						fclose(fptr[HABPacketImageEnd.imageFileID]);
 						fptr[HABPacketImageEnd.imageFileID] = NULL;
-
-						HABPacketImageSeqEnd.imageFileID = HABPacketImageEnd.imageFileID;
-						if (fptrSeq[HABPacketImageSeqEnd.imageFileID])
-						{
-							HABPacketImageSeqEnd.packetType  = END_SEQ_IMAGE;
-							HABPacketImageSeqEnd.imageFileID = HABPacketImageEnd.imageFileID;
-							HABPacketImageSeqEnd.gwID        = getGWID();
-							fwrite(&HABPacketImageSeqEnd, 1, sizeof(HABPacketImageSeqEnd), fptrSeq[HABPacketImageSeqEnd.imageFileID]);
-							fclose(fptrSeq[HABPacketImageSeqEnd.imageFileID]);
-							fptrSeq[HABPacketImageSeqEnd.imageFileID] = NULL;
-
-							char command[MAX_COMMAND_SIZE];
-							int commandStatus;
-
-							sprintf (command, "ftp-upload -h %s:%d -u sonde --password sonde --passive -d / %s", getGatewayServerIPAddress(),getGatewayFTPPort(),getImageSeqFilePathName());
-							printf("FTP Commad %s\n",command);
-							commandStatus = system(command);
-							printf("FTP commandStatus %d\n",commandStatus);
-						}
 					}
 					else
 					{
-						printf("ERROR processImageFilePacket no file open for HABPacketImageEnd.imageFileID %d\n",HABPacketImageEnd.imageFileID);
+						printf("ERROR fptr no file open for HABPacketImageEnd.imageFileID %d\n",HABPacketImageEnd.imageFileID);
+
+					}
+
+					HABPacketImageSeqEnd.imageFileID = HABPacketImageEnd.imageFileID;
+					if (fptrSeq[HABPacketImageSeqEnd.imageFileID])
+					{
+						HABPacketImageSeqEnd.packetType  = END_SEQ_IMAGE;
+						HABPacketImageSeqEnd.imageFileID = HABPacketImageEnd.imageFileID;
+						HABPacketImageSeqEnd.gwID        = getGWID();
+						fwrite(&HABPacketImageSeqEnd, 1, sizeof(HABPacketImageSeqEnd), fptrSeq[HABPacketImageSeqEnd.imageFileID]);
+						fclose(fptrSeq[HABPacketImageSeqEnd.imageFileID]);
+						fptrSeq[HABPacketImageSeqEnd.imageFileID] = NULL;
+
+						char command[MAX_COMMAND_SIZE];
+						int commandStatus;
+
+						sprintf (command, "ftp-upload -h %s:%d -u sonde --password sonde --passive -d / %s", getGatewayServerIPAddress(),getGatewayFTPPort(),getImageSeqFilePathName());
+						printf("FTP Commad %s\n",command);
+						commandStatus = system(command);
+						printf("FTP commandStatus %d\n",commandStatus);
+					}
+					else
+					{
+						printf("ERROR fptrSeq no file open for HABPacketImageEnd.imageFileID %d\n",HABPacketImageEnd.imageFileID);
 
 					}
 				}
@@ -218,7 +226,15 @@ int processImageFilePacket(unsigned char * imagefilePacket, int len, int packetT
 				status = 0;
 			}
 
-			printf("END_IMAGE%d\n",len);
+			printf("END_IMAGE %d\n",HABPacketImageEnd.imageFileID);
+
+			printf("END_IMAGE File Cleanup Begin\n");
+			for(int i = 0; i < 256;i++)
+			{
+				fptr[i]    = NULL;
+				fptrSeq[i] = NULL;
+			}
+			printf("END_IMAGE File Cleanup End\n");
 
 			break;
 		default:

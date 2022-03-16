@@ -4,10 +4,12 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <signal.h>
-#include "modem.h"
+#include "queue.h"
+#include "logger.h"
 #include "packetDefs.h"
 #include "statusThread.h"
-#include "logger.h"
+#include "webClientThread.h"
+#include "utils.h"
 
 int statusThreadActive		= 0;
 
@@ -16,14 +18,43 @@ static pthread_mutex_t  statusConMut = PTHREAD_MUTEX_INITIALIZER;
 
 void *statusThreadFunc(void *x_void_ptr)
 {
+	int result = 1;
+
+	QelementData statusQData;
+
+	struct webHABPacketDataType webHABPacketData;
+
 	printf("Start Status Thread  \n");
+
 	statusThreadActive = 1;
 	while (statusThreadActive)
 	{
 		pthread_mutex_lock (&statusConMut);
 		pthread_cond_wait(&statusCon, &statusConMut);
 		pthread_mutex_unlock (&statusConMut);
+		//printf("After Wait\n");
 
+		sprintf((char *)webHABPacketData.webData,"$PING_GW%d", getGWID());
+		statusQData.len = strlen((const char *)webHABPacketData.webData);
+		if(statusQData.len > sizeof(webHABPacketData.webData))
+		{
+			printf("ERROR statusThreadFunc Logger Failed\n");
+		}
+		else
+		{
+			statusQData.buf = calloc(statusQData.len,sizeof(unsigned char));
+			memcpy(statusQData.buf,webHABPacketData.webData,statusQData.len);
+			result = loggerThreadSend(statusQData);
+			if(result != 1)
+			{
+				printf("ERROR MAX_STATUS_LEN exceeded\n");
+			}
+
+			webHABPacketData.packetType    = PING;
+			webHABPacketData.webDataLen = statusQData.len;
+			result = sendToGatewayServer(webHABPacketData);
+			//printf("%s\n",webHABPacketData.webData);
+		}
 	}
 
 	return EXIT_SUCCESS;
@@ -74,4 +105,5 @@ void stopStatusThread()
 void signalStatusThread()
 {
 	pthread_cond_signal(&statusCon);
+	//printf("signalStatusThread\n");
 }
