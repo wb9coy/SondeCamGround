@@ -8,9 +8,9 @@
 
 struct __attribute__((__packed__)) webHABPacketDataType
 {
-	uint8_t   packetType;
-	uint8_t   webDataLen;
-	uint8_t   webData[MAX_WEB_BUF_LEN];
+	uint16_t   packetType;
+	uint8_t    webDataLen;
+	uint8_t    webData[MAX_WEB_BUF_LEN];
 };
 
 int connectToServer();
