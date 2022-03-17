@@ -37,7 +37,7 @@ int processImageFilePacket(unsigned char * imagefilePacket, int len, int packetT
 	{
 		case START_IMAGE:
 			printf("START_IMAGE File Cleanup Begin\n");
-			prevSeq = 0;
+			prevSeq = -1;
 
 			for(int i = 0; i < 256;i++)
 			{
@@ -118,7 +118,7 @@ int processImageFilePacket(unsigned char * imagefilePacket, int len, int packetT
 						{
 							printf("#######################  SEQ ERROR %d %d\n",prevSeq, HABPacketImageData.imageSeqnum);
 						}
-						if( ftell(fptr[HABPacketImageData.imageFileID]) >=0)
+						if( HABPacketImageData.imageSeqnum > prevSeq)
 						{
 							fwrite(HABPacketImageData.imageData, 1, HABPacketImageData.imageDataLen, fptr[HABPacketImageData.imageFileID]);
 						}
