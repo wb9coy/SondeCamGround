@@ -38,12 +38,10 @@ static int callback_hab( struct lws *wsi, enum lws_callback_reasons reason, void
 		case LWS_CALLBACK_CLIENT_APPEND_HANDSHAKE_HEADER:
 			break;
 		case LWS_CALLBACK_CLIENT_ESTABLISHED:
-			lws_callback_on_writable( wsi );
 			connectedToServer = 1;
 			printf("Web Socket Connected to %s\n",ccinfo.address);
 			break;
 		case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
-			lws_callback_on_writable( wsi );
 			connectedToServer = 1;
 			printf("Web Socket Connected to %s\n",ccinfo.address);
 			break;
