@@ -48,7 +48,7 @@ struct __attribute__((__packed__)) HABPacketImageDataType
 	uint8_t    imageDataLen;
 	uint8_t    imageData[MAX_IMG_BUF_LEN];
 	uint16_t   crc16;
-	//uint8_t   codeword[NPAR];
+	//uint8_t    codeword[NPAR];
 };
 
 struct __attribute__((__packed__)) HABPacketImageEndType
