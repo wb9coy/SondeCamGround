@@ -78,6 +78,24 @@ static int callback_hab( struct lws *wsi, enum lws_callback_reasons reason, void
 						//printf("lws_write %s\n",webHABPacketData.webData);
 						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
 						break;
+					case PRESS_INFO:
+						//printf("WSC INT_TEMP\n");
+						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
+						//printf("lws_write %s\n",webHABPacketData.webData);
+						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
+						break;
+					case HUM_INFO:
+						//printf("WSC INT_TEMP\n");
+						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
+						//printf("lws_write %s\n",webHABPacketData.webData);
+						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
+						break;
+					case EXT_TEMP:
+						//printf("WSC INT_TEMP\n");
+						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);
+						//printf("lws_write %s\n",webHABPacketData.webData);
+						lws_write( wsi, webHABPacketData.webData, webHABPacketData.webDataLen, LWS_WRITE_TEXT );
+						break;
 					case CW_ID:
 						//printf("CW ID %s\n",webHABPacketData.webData);
 						memcpy(&webHABPacketData, webClientThreadQData.buf,webClientThreadQData.len);

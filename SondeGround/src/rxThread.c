@@ -176,6 +176,30 @@ int rxThreadDispatchPacket(unsigned char *rxThreadDispatchPacketBuf,int len)
 				printf("ERROR Failed processSensorPacket type %d\n",packetType);
 			}
 			break;
+		case EXT_TEMP:
+			//printf("EXT TEMP\n");
+			status = processExternalTempPacket(rxThreadDispatchPacketBuf,len,packetType);
+			if(status != 1)
+			{
+				printf("ERROR Failed processSensorPacket type %d\n",packetType);
+			}
+			break;
+		case PRESS_INFO:
+			//printf("PRESSURE INFO\n");
+			status = processPressurePacket(rxThreadDispatchPacketBuf,len,packetType);
+			if(status != 1)
+			{
+				printf("ERROR Failed processSensorPacket type %d\n",packetType);
+			}
+			break;
+		case HUM_INFO:
+			//printf("HUM INFO\n");
+			status = processHumidityPacket(rxThreadDispatchPacketBuf,len,packetType);
+			if(status != 1)
+			{
+				printf("ERROR Failed processHumitityPacket type %d\n",packetType);
+			}
+			break;
 		case INFO_DATA:
 			status = processInfoPacket(rxThreadDispatchPacketBuf,len);
 			if(status != 1)

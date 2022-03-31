@@ -108,6 +108,22 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 				break;
 			}
 
+			case EXT_TEMP:
+			{
+				rxThreadData.size = sizeof(struct HABPacketExtTempInfoDataType);
+				break;
+			}
+
+			case PRESS_INFO:
+			{
+				rxThreadData.size = sizeof(struct HABPacketPressureInfoDataType);
+				break;
+			}
+			case HUM_INFO:
+			{
+				rxThreadData.size = sizeof(struct HABPacketHumidityInfoDataType);
+				break;
+			}
 			case INFO_DATA:
 			{
 				rxThreadData.size = sizeof(struct HABPacketInfoDataType);
