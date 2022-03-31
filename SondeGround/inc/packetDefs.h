@@ -21,9 +21,12 @@
 #define	GPS_RMC_1		0xaa
 #define	GPS_RMC_2		0x99
 #define	INT_TEMP		0x88
-#define BATT_INFO		0x77
-#define INFO_DATA		0x66
-#define CW_ID			0x55
+#define	EXT_TEMP		0x77
+#define BATT_INFO		0x66
+#define PRESS_INFO		0x55
+#define HUM_INFO        0x44
+#define INFO_DATA		0x33
+#define CW_ID			0x22
 
 #define	START_SEQ_IMAGE	0x10
 #define	IMAGE_SEQ_DATA  0x11
@@ -132,5 +135,28 @@ struct __attribute__((__packed__)) HABPacketIntTempInfoDataType
 	uint8_t    codeword[NPAR];
 };
 
+struct __attribute__((__packed__)) HABPacketExtTempInfoDataType
+{
+	uint16_t   packetType;
+	float      extTempInfoData;
+	uint16_t   crc16;
+	uint8_t    codeword[NPAR];
+};
+
+struct __attribute__((__packed__)) HABPacketPressureInfoDataType
+{
+	uint16_t   packetType;
+	float      pressureInfoData;
+	uint16_t   crc16;
+	uint8_t    codeword[NPAR];
+};
+
+struct __attribute__((__packed__)) HABPacketHumidityInfoDataType
+{
+	uint16_t   packetType;
+	float      humidityInfoData;
+	uint16_t   crc16;
+	uint8_t    codeword[NPAR];
+};
 
 #endif
