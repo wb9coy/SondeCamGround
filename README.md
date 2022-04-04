@@ -14,6 +14,7 @@ How to install on Rapsberry PI
 8) type make
 9) cd /home/pi/SondeGround
 10) edit the habGWconfig.ini for your particular gateway
-11) To autostart at boot refer to /home/pi/SondeGround/systemd/readme.txt
+11) sudo reboot
+12) To autostart at boot refer to /home/pi/SondeGround/systemd/readme.txt
 
 To view the pictures and telemetry data go to: http://192.169.177.148:8080/
