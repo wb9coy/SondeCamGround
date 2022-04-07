@@ -21,17 +21,20 @@ static pthread_mutex_t webClientThreadFuncConMut = PTHREAD_MUTEX_INITIALIZER;
 static Queue *webClientQ;
 
 static struct lws *web_socket = NULL;
-static struct lws_context *context;
 static struct lws_context_creation_info info;
 static struct lws_client_connect_info ccinfo = {0};
 
-int connectedToServer = 0;
+static int connectedToServer = 0;
+static int destroyContext    = 0;
 
-static int callback_hab( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
+static int callback_hab( struct lws *wsi, enum lws_callback_reasons reasonParam, void *user, void *in, size_t len )
 {
 	int QStatus;
 	uint8_t   packetType;
 	QelementData webClientThreadQData;
+	int reason;
+
+	reason =  reasonParam;
 	//printf("Reason %d\n",reason);
 	switch( reason )
 	{
@@ -42,8 +45,6 @@ static int callback_hab( struct lws *wsi, enum lws_callback_reasons reason, void
 			printf("Web Socket Connected to %s\n",ccinfo.address);
 			break;
 		case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
-			connectedToServer = 1;
-			printf("Web Socket Connected to %s\n",ccinfo.address);
 			break;
 		case LWS_CALLBACK_CLIENT_RECEIVE:
 			/* Handle incomming messages here. */
@@ -63,6 +64,8 @@ static int callback_hab( struct lws *wsi, enum lws_callback_reasons reason, void
 
 				switch(packetType)
 				{
+					case GPS_GGA:
+					case GPS_RMC:
 					case GPS_GGA_2:
 					case GPS_RMC_2:
 						//printf("WSC GPS\n");
@@ -126,10 +129,11 @@ static int callback_hab( struct lws *wsi, enum lws_callback_reasons reason, void
 			break;
 		}
 
+		case 75:
 		case LWS_CALLBACK_CLOSED:
 		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-			web_socket = NULL;
 			connectedToServer = 0;
+			destroyContext    = 1;
 			break;
 		case LWS_CALLBACK_CHANGE_MODE_POLL_FD:
 		case LWS_CALLBACK_LOCK_POLL:
@@ -163,8 +167,7 @@ static struct lws_protocols protocols[] =
 
 void *webClientThreadFunc(void *x_void_ptr)
 {
-	int webClientQueueSize =100;
-	int connectStatus = 0;
+	int webClientQueueSize =10;
 
 	printf("Start Web Client Thread  \n");
 	webClientQ = createQueue(webClientQueueSize);
@@ -176,45 +179,61 @@ void *webClientThreadFunc(void *x_void_ptr)
 	info.gid = -1;
 	info.uid = -1;
 
-	context = lws_create_context( &info );
-
-	ccinfo.context = context;
+	ccinfo.context = NULL;
 	ccinfo.address = getGatewayServerIPAddress();
 	ccinfo.port = getGatewayServerPort();
 	ccinfo.path = "/";
-	ccinfo.host = lws_canonical_hostname( context );
 	ccinfo.origin = "origin";
 	ccinfo.protocol = protocols[PROTOCOL_HAB].name;
-	ccinfo.parent_wsi = web_socket;
 
 	webClientThreadActive = 1;
+
 	while (webClientThreadActive)
 	{
-		while(connectedToServer == 0)
-		{
-			printf("Trying to connect to %s\n",ccinfo.address);
-			connectStatus = connectToServer();
-			if(connectStatus == 0)
-			{
-				sleep(10);
-			}
-			else
-			{
-				lws_service( context, 10000);
-			}
-		}
-
 		pthread_mutex_lock (&webClientThreadFuncConMut);
 		pthread_cond_wait(&webClientQcon, &webClientThreadFuncConMut);
 		pthread_mutex_unlock (&webClientThreadFuncConMut);
 
-		while( (webClientQ->size > 0) && (connectedToServer == 1))
+		if(destroyContext ==  1)
 		{
+			printf("lws_context_destroy \n");
+			lws_context_destroy(ccinfo.context);
+			destroyContext    = 0;
+			ccinfo.context    = NULL;
+			web_socket        = NULL;
+			ccinfo.parent_wsi = NULL;
+			sleep(5);
+		}
+
+		if(ccinfo.context == NULL)
+		{
+			printf("lws_create_context \n");
+			ccinfo.context = lws_create_context( &info );
+		    ccinfo.host = lws_canonical_hostname( ccinfo.context );
+		}
+
+		if(web_socket == NULL)
+		{
+			web_socket = lws_client_connect_via_info(&ccinfo);
+			lws_service( ccinfo.context, 10000);
 			if(web_socket)
 			{
-				lws_callback_on_writable( web_socket );
-				lws_service( context, 1000);
+				lws_service( ccinfo.context, 10000);
 			}
+		}
+
+		if(connectedToServer)
+		{
+			while(webClientQ->size > 0  && (connectedToServer))
+			{
+				lws_callback_on_writable( web_socket );
+				lws_service( ccinfo.context, 1000);
+			}
+		}
+		else
+		{
+			printf("Trying to connect to %s\n",ccinfo.address);
+			lws_service( ccinfo.context, 1000);
 		}
 	}
 
@@ -265,27 +284,6 @@ int getwebClientQueueSize()
 	return webClientQ->size;
 }
 
-int connectToServer()
-{
-
-	int connectStatus = 0;
-
-	//printf("connectToServer Before lws_client_connect_via_info(&ccinfo) \n");
-	web_socket = lws_client_connect_via_info(&ccinfo);
-	if(web_socket)
-	{
-		//printf("connectToServer Before lws_service( context, 10000 \n");
-		lws_service( context, 1000);
-		connectStatus = 1;
-	}
-	else
-	{
-		connectStatus = 0;
-	}
-
-	return connectStatus;
-}
-
 int sendToGatewayServer(struct webHABPacketDataType webHABPacketData)
 {
 	int status =1;
@@ -296,28 +294,22 @@ int sendToGatewayServer(struct webHABPacketDataType webHABPacketData)
 
 	if(webClientQ)
 	{
-		if(connectedToServer)
+		webClientThreadQData.len = sizeof(webHABPacketData);
+		webClientThreadQData.buf = calloc(webClientThreadQData.len,sizeof(unsigned char));
+		//printf("BEFORE sendToGatewayServer memcpy(webClientThreadQData.buf,sendToGatewayServerBuf,webClientThreadQData.len)\n");
+		memcpy(webClientThreadQData.buf,&webHABPacketData,webClientThreadQData.len);
+		//printf("AFTER sendToGatewayServer memcpy(webClientThreadQData.buf,sendToGatewayServerBuf,webClientThreadQData.len)\n");
+		pthread_mutex_lock (&webClientQmut);
+		QStatus = Enqueue(webClientQ, webClientThreadQData);
+		pthread_cond_signal(&webClientQcon);
+		pthread_mutex_unlock (&webClientQmut);
+		if(QStatus != 1)
 		{
-			webClientThreadQData.len = sizeof(webHABPacketData);
-			webClientThreadQData.buf = calloc(webClientThreadQData.len,sizeof(unsigned char));
-			//printf("BEFORE sendToGatewayServer memcpy(webClientThreadQData.buf,sendToGatewayServerBuf,webClientThreadQData.len)\n");
-			memcpy(webClientThreadQData.buf,&webHABPacketData,webClientThreadQData.len);
-			//printf("AFTER sendToGatewayServer memcpy(webClientThreadQData.buf,sendToGatewayServerBuf,webClientThreadQData.len)\n");
-			pthread_mutex_lock (&webClientQmut);
-			//printf("AFTER sendToGatewayServer pthread_mutex_lock\n");
-
-			QStatus = Enqueue(webClientQ, webClientThreadQData);
-			//printf("Enqueue %s\n",webClientThreadQData.buf);
-			//printf("AFTER Enqueue(webClientQ, webClientThreadQData)\n");
-			if(QStatus != 1)
-			{
-				printf("ERROR sendToGatewayServer Failed enqueue\n");
-			}
-			//printf("BEFORE sendToGatewayServer pthread_cond_signal(&webClientQcon)\n");
-			pthread_cond_signal(&webClientQcon);
-			pthread_mutex_unlock (&webClientQmut);
-			//printf("AFTER pthread_mutex_unlock (&webClientQmut)\n");
+			printf("ERROR sendToGatewayServer Failed enqueue\n");
+			free(webClientThreadQData.buf);
 		}
+
+		//printf("AFTER pthread_mutex_unlock (&webClientQmut)\n");
 	}
 
 	return status;

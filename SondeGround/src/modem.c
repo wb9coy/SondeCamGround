@@ -36,7 +36,7 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 	rssiVal = getRSSI(getSPID());
 	rxThreadData.rssi = rssiVal/2.0-22.0;
 
-	if(rxThreadData.rssi < 95.00)
+	if(rxThreadData.rssi < 93.00)
 	{
 
 		for(int i=0; i < MTU_SIZE; i++)
@@ -130,12 +130,14 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 				break;
 			}
 
+			case GPS_GGA:
 			case GPS_GGA_1:
 			case GPS_GGA_2:
+			case GPS_RMC:
 			case GPS_RMC_1:
 			case GPS_RMC_2:
 			{
-				rxThreadData.size = MAX_GPS_BUF_LEN +3;
+				rxThreadData.size = MAX_GPS_BUF_LEN + MAX_GPS_HDR_LEN;
 				break;
 			}
 			case START_IMAGE:
@@ -250,7 +252,7 @@ int modemSetup(dictionary *ini)
 	modem.eth.dio0GpioN       = iniparser_getint(ini,"modem:dio0GpioN",25);
 	modem.eth.bps             = iniparser_getint(ini,"modem:bps",0);
 	modem.eth.resetGpioN      = iniparser_getint(ini,"modem:resetGpioN",4);
-	modem.eth.freq            = iniparser_getint(ini,"modem:freq",434200000);
+	modem.eth.freq            = iniparser_getint(ini,"modem:freq",434500000);
 	modem.eth.freqofs         = iniparser_getint(ini,"modem:offset",0);
 	modem.eth.agcbw           = 12500;
 	modem.eth.rxbw            = 200000;
@@ -316,7 +318,6 @@ int modemSetup(dictionary *ini)
 		return status;
 	}
 
-	//const char *SYNC="\xFF\xFF\xFF\xFF";
 	const char *SYNC="\x08\x6D\x53\x88";
 	status = setSyncConf(modem.spid,0x53, 4, (const uint8_t *)SYNC);
 	if(status != 1)

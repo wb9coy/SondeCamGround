@@ -28,7 +28,7 @@ static Queue *rxQ;
 
 void *rxThreadFunc(void *x_void_ptr)
 {
-	int rxQueueSize =10000;
+	int rxQueueSize =100;
 
 	int rssiTic =0;
 
@@ -157,8 +157,10 @@ int rxThreadDispatchPacket(unsigned char *rxThreadDispatchPacketBuf,int len)
 				printf("ERROR Failed processImageFilePacket type %d\n",packetType);
 			}
 			break;
+		case GPS_GGA:
 		case GPS_GGA_1:
 		case GPS_GGA_2:
+		case GPS_RMC:
 		case GPS_RMC_1:
 		case GPS_RMC_2:
 			//printf("GPS Packet Type %d\n",packetType);

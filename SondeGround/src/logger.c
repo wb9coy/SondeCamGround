@@ -31,7 +31,7 @@ void *loggerThreadFunc(void *x_void_ptr)
 	char dataToLog[200];
 	int lenDataToLog;
 
-	int loggerQueueSize =10000;
+	int loggerQueueSize =100;
 
 	int QStatus;
 	QelementData loggerData;

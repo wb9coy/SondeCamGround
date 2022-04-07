@@ -17,7 +17,7 @@ int processBattInfoDataPacket(unsigned char * infoPacket, int len)
 
 	QelementData battInfoQData;
 
-	if(len > sizeof(HABPacketBattInfoData))
+	if(len != sizeof(HABPacketBattInfoData))
 	{
 		printf("ERROR processBattInfoDataPacket len error\n");
 		result = 0;

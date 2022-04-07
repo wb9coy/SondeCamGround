@@ -9,6 +9,9 @@
 #include "webClientThread.h"
 
 
+static uint8_t   lastGGASentence[MAX_GPS_NMEA_SIZE];
+static uint8_t   lastRMCSentence[MAX_GPS_NMEA_SIZE];
+
 int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 {
 	int result = 1;
@@ -42,6 +45,12 @@ int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 		{
 			switch(packetType)
 			{
+				case GPS_GGA:
+					memset(gpsSentence,'\0',sizeof(gpsSentence));
+					memcpy(gpsSentence,HABPacketGPSData.gpsData,HABPacketGPSData.gpsDataLen);
+					gpsSentenceLen = HABPacketGPSData.gpsDataLen;
+					gpsGGADataLen = 0;
+					break;
 				case GPS_GGA_1:
 				{
 					memset(gpsGGAData,'\0',sizeof(gpsGGAData));
@@ -52,12 +61,13 @@ int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 				}
 				case GPS_GGA_2:
 				{
-					if( (HABPacketGPSData.gpsDataLen + MAX_GPS_BUF_LEN) > MAX_GPS_NMEA_SIZE)
+					if( (HABPacketGPSData.gpsDataLen + MAX_GPS_HDR_LEN) > sizeof(HABPacketGPSData))
 					{
 						memset(gpsGGAData,'\0',sizeof(gpsGGAData));
 						memset(gpsSentence,'\0',sizeof(gpsSentence));
 						printf("ERROR GPS_GGA_2 len\n");
 						result = 0;
+						gpsGGADataLen = 0;
 					}
 					else
 					{
@@ -73,12 +83,20 @@ int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 							gpsGGADataLen = HABPacketGPSData.gpsDataLen + gpsGGADataLen;
 							memcpy(&gpsGGAData[MAX_GPS_BUF_LEN],HABPacketGPSData.gpsData,HABPacketGPSData.gpsDataLen);
 							memcpy(gpsSentence,gpsGGAData,gpsGGADataLen);
+							memset(lastGGASentence,'\0',sizeof(lastGGASentence));
+							memcpy(lastGGASentence,gpsGGAData,gpsGGADataLen);
 							gpsSentenceLen = gpsGGADataLen;
 							gpsGGADataLen = 0;
 						}
 					}
 					break;
 				}
+				case GPS_RMC:
+					memset(gpsSentence,'\0',sizeof(gpsSentence));
+					memcpy(gpsSentence,HABPacketGPSData.gpsData,HABPacketGPSData.gpsDataLen);
+					gpsSentenceLen = HABPacketGPSData.gpsDataLen;
+					gpsRMCDataLen = 0;
+					break;
 				case GPS_RMC_1:
 				{
 					memset(gpsRMCData,'\0',sizeof(gpsRMCData));
@@ -89,12 +107,13 @@ int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 				}
 				case GPS_RMC_2:
 				{
-					if( (HABPacketGPSData.gpsDataLen + MAX_GPS_BUF_LEN) > MAX_GPS_NMEA_SIZE)
+					if( (HABPacketGPSData.gpsDataLen + MAX_GPS_HDR_LEN) > sizeof(HABPacketGPSData))
 					{
 						memset(gpsGGAData,'\0',sizeof(gpsGGAData));
 						memset(gpsSentence,'\0',sizeof(gpsSentence));
 						printf("ERROR GPS_GGA_2 len\n");
 						result = 0;
+						gpsRMCDataLen = 0;
 					}
 					else
 					{
@@ -110,6 +129,8 @@ int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 							gpsRMCDataLen = HABPacketGPSData.gpsDataLen + gpsRMCDataLen;
 							memcpy(&gpsRMCData[MAX_GPS_BUF_LEN],HABPacketGPSData.gpsData,HABPacketGPSData.gpsDataLen);
 							memcpy(gpsSentence,gpsRMCData,gpsRMCDataLen);
+							memset(lastRMCSentence,'\0',sizeof(lastRMCSentence));
+							memcpy(lastRMCSentence,gpsRMCData,gpsRMCDataLen);
 							gpsSentenceLen = gpsRMCDataLen;
 							gpsRMCDataLen = 0;
 						}
@@ -124,6 +145,8 @@ int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 	{
 		switch(packetType)
 		{
+			case GPS_GGA:
+			case GPS_RMC:
 			case GPS_GGA_2:
 			case GPS_RMC_2:
 			if(result == 1)
@@ -150,6 +173,9 @@ int processGPSPacket(unsigned char * GPSPacket, int len, int packetType)
 					result = sendToGatewayServer(webHABPacketData);
 				}
 			}
+			gpsRMCDataLen = 0;
+			gpsGGADataLen = 0;
+			break;
 		}
 	}
 
@@ -210,4 +236,22 @@ int validateNMEAChecksum(char *buf, int len)
     }
 
     return (result);
+}
+
+int getLastGGA(uint8_t buf[])
+{
+    int result = 0;
+
+    memcpy(buf,lastGGASentence,strlen((const char *)lastGGASentence));
+
+    return result;
+}
+
+int getLastRMC(uint8_t buf[])
+{
+    int result = 0;
+
+    memcpy(buf,lastRMCSentence,strlen((const char *)lastRMCSentence));
+
+    return result;
 }

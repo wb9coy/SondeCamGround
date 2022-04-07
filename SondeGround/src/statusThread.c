@@ -38,7 +38,8 @@ void *statusThreadFunc(void *x_void_ptr)
 		statusQData.len = strlen((const char *)webHABPacketData.webData);
 		if(statusQData.len > sizeof(webHABPacketData.webData))
 		{
-			printf("ERROR statusThreadFunc Logger Failed\n");
+			printf("ERROR MAX_STATUS_LEN exceeded\n");
+			result = 0;
 		}
 		else
 		{
@@ -47,7 +48,7 @@ void *statusThreadFunc(void *x_void_ptr)
 			result = loggerThreadSend(statusQData);
 			if(result != 1)
 			{
-				printf("ERROR MAX_STATUS_LEN exceeded\n");
+				printf("ERROR statusThreadFunc Logger Failed\n");
 			}
 
 			webHABPacketData.packetType    = PING;

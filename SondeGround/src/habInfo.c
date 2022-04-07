@@ -18,7 +18,7 @@ int processInfoPacket(unsigned char * infoPacket, int len)
 
 	QelementData infoQData;
 
-	if(len > sizeof(HABPacketInfoData))
+	if(len != sizeof(HABPacketInfoData))
 	{
 		printf("ERROR processInfoPacket len error\n");
 		result = 0;
@@ -48,6 +48,7 @@ int processInfoPacket(unsigned char * infoPacket, int len)
 			if(infoQData.len > sizeof(webHABPacketData.webData))
 			{
 				printf("ERROR MAX INFO Len exceeded\n");
+				result = 0;
 			}
 			else
 			{

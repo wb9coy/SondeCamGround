@@ -18,7 +18,7 @@ int processInternalTempPacket(unsigned char * sensorPacket, int len, int packetT
 
 	QelementData sensorQData;
 
-	if(len > sizeof(HABPacketIntTempInfoData))
+	if(len != sizeof(HABPacketIntTempInfoData))
 	{
 		printf("ERROR processSensorPacket len error\n");
 		result = 0;
@@ -49,6 +49,7 @@ int processInternalTempPacket(unsigned char * sensorPacket, int len, int packetT
 			if(sensorQData.len > sizeof(webHABPacketData.webData))
 			{
 				printf("ERROR MAX_SENSOR_LEN exceeded\n");
+				result = 0;
 			}
 			else
 			{
@@ -76,7 +77,7 @@ int processExternalTempPacket(unsigned char * sensorPacket, int len, int packetT
 
 	QelementData sensorQData;
 
-	if(len > sizeof(HABPacketExtTempInfoData))
+	if(len != sizeof(HABPacketExtTempInfoData))
 	{
 		printf("ERROR processExternalTempPacket len error\n");
 		result = 0;
@@ -107,6 +108,7 @@ int processExternalTempPacket(unsigned char * sensorPacket, int len, int packetT
 			if(sensorQData.len > sizeof(webHABPacketData.webData))
 			{
 				printf("ERROR MAX_SENSOR_LEN exceeded\n");
+				result = 0;
 			}
 			else
 			{
@@ -134,7 +136,7 @@ int processPressurePacket(unsigned char * sensorPacket, int len, int packetType)
 
 	QelementData sensorQData;
 
-	if(len > sizeof(HABPacketPressureInfoData))
+	if(len != sizeof(HABPacketPressureInfoData))
 	{
 		printf("ERROR processPressurePacket len error\n");
 		result = 0;
@@ -165,6 +167,7 @@ int processPressurePacket(unsigned char * sensorPacket, int len, int packetType)
 			if(sensorQData.len > sizeof(webHABPacketData.webData))
 			{
 				printf("ERROR MAX_SENSOR_LEN exceeded\n");
+				result = 0;
 			}
 			else
 			{
@@ -192,7 +195,7 @@ int processHumidityPacket(unsigned char * sensorPacket, int len, int packetType)
 
 	QelementData sensorQData;
 
-	if(len > sizeof(HABPacketHumidityInfoData))
+	if(len != sizeof(HABPacketHumidityInfoData))
 	{
 		printf("ERROR processHumidityPacket len error\n");
 		result = 0;

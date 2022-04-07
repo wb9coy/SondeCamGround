@@ -17,7 +17,7 @@ int processCallSignPacket(unsigned char * infoPacket, int len)
 
 	QelementData callsignQData;
 
-	if(len > sizeof(HABPacketCallSignData))
+	if(len != sizeof(HABPacketCallSignData))
 	{
 		printf("ERROR processCallSignPacket len error\n");
 		result = 0;
@@ -47,6 +47,7 @@ int processCallSignPacket(unsigned char * infoPacket, int len)
 			if(callsignQData.len > sizeof(webHABPacketData.webData))
 			{
 				printf("ERROR MAX Call Sign Len exceeded\n");
+				result = 0;
 			}
 			else
 			{
