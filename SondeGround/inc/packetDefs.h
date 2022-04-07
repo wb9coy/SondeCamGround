@@ -6,27 +6,31 @@
 
 #define MAX_BUF_LEN		   58
 #define MAX_GPS_BUF_LEN    61
+#define MAX_GPS_HDR_LEN    3
 #define MAX_IMG_BUF_LEN    56
 #define MAX_CALL_SIGN_SIZE 12
 #define MAX_INFO_DATA_SIZE 32
 
-#define MTU_SIZE        64
+#define MTU_SIZE          64
+#define MAX_GPS_NMEA_SIZE 82
 
 //Packet Type
 #define	START_IMAGE		0xff
 #define	IMAGE_DATA		0xee
 #define	END_IMAGE		0xdd
-#define	GPS_GGA_1		0xcc
-#define	GPS_GGA_2		0xbb
-#define	GPS_RMC_1		0xaa
-#define	GPS_RMC_2		0x99
-#define	INT_TEMP		0x88
-#define	EXT_TEMP		0x77
-#define BATT_INFO		0x66
-#define PRESS_INFO		0x55
-#define HUM_INFO        0x44
-#define INFO_DATA		0x33
-#define CW_ID			0x22
+#define	GPS_GGA			0xc1
+#define	GPS_GGA_1		0xc2
+#define	GPS_GGA_2		0xc3
+#define	GPS_RMC			0xb1
+#define	GPS_RMC_1		0xb2
+#define	GPS_RMC_2		0xb3
+#define	INT_TEMP		0xaa
+#define	EXT_TEMP		0x99
+#define BATT_INFO		0x88
+#define PRESS_INFO		0x77
+#define HUM_INFO        0x66
+#define INFO_DATA		0x55
+#define CW_ID			0x44
 
 #define	START_SEQ_IMAGE	0x10
 #define	IMAGE_SEQ_DATA  0x11
@@ -85,6 +89,15 @@ struct __attribute__((__packed__)) HABPacketImageSeqEndType
 	uint16_t  packetType;
 	uint8_t   imageFileID;
 	uint8_t   gwID;
+};
+
+struct __attribute__((__packed__)) GWPacketImageSeqEndType
+{
+	uint16_t  packetType;
+	uint8_t   imageFileID;
+	uint8_t   gwID;
+	uint8_t   GGASentence[MAX_GPS_NMEA_SIZE];
+	uint8_t   RMCSentence[MAX_GPS_NMEA_SIZE];
 };
 
 struct __attribute__((__packed__)) HABPacketGPSDataType
