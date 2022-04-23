@@ -9,10 +9,10 @@
 
 static GFSK_ctl modem;
 struct rxThreadDataType rxThreadData;
-static float plusOffsetLmit  =  2000.0;
-static float minusOffsetLmit = -2000.0;
-static float minusOffset = 0;
-static float plusOffset  = 0;
+//static float plusOffsetLmit  =  2000.0;
+//static float minusOffsetLmit = -2000.0;
+//static float minusOffset = 0;
+//static float plusOffset  = 0;
 
 void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 {
@@ -20,9 +20,10 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 	int goodPacket = 1;
 	int status     = 1;
 
-	float adjustedFreq        = 0;
-	int32_t afcVal;
+//	float adjustedFreq        = 0;
+//	int32_t afcVal;
 	int16_t rssiVal;
+	//uint16_t LNA;
 
 //    memset(modem->rx.data.buf,'\0',MTU_SIZE);
 //	printf("Before read\n");
@@ -31,12 +32,14 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 //		printf("%x ",modem->rx.data.buf[i]);
 //	}
 //	printf("\n");
+//    LNA = readRegister(modem->spid, REG_LNA);
+//    printf("LNA %x\n",LNA);
 
 	usleep(400);
 	rssiVal = getRSSI(getSPID());
 	rxThreadData.rssi = rssiVal/2.0-22.0;
 
-	if(rxThreadData.rssi < 93.00)
+	if(rxThreadData.rssi < 105.00)
 	{
 
 		for(int i=0; i < MTU_SIZE; i++)
@@ -44,44 +47,49 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 			rxThreadData.buf[i] = readRegister(modem->spid,REG_FIFO);
 		}
 
-		afcVal = getAFC(getSPID());
+//		afcVal = getAFC(getSPID());
+//
+//		if(plusOffset < plusOffsetLmit)
+//		{
+//			if(afcVal > 400)
+//			{
+//				printf("afcVal = %d \n",afcVal);
+//				plusOffset = plusOffset + 50;
+//				adjustedFreq = modem->eth.freq + modem->eth.freqofs + plusOffset;
+//				setFrequency(getSPID(),adjustedFreq);
+//				printf("*********AFC +50\n");
+//			}
+//		}
+//		else
+//		{
+//			plusOffset = 0;
+//			printf("afcVal = %d \n",afcVal);
+//			printf("Plus AFC adjust limit of %f reached  adjust offset in ini file\n",plusOffsetLmit);
+//		}
+//
+//		if(minusOffset > minusOffsetLmit)
+//		{
+//			if(afcVal < -400)
+//			{
+//				printf("afcVal = %d \n",afcVal);
+//				minusOffset = minusOffset - 50;
+//				adjustedFreq = modem->eth.freq + modem->eth.freqofs + minusOffset;
+//				setFrequency(getSPID(),adjustedFreq);
+//				printf("*********AFC -50\n");
+//			}
+//
+//		}
+//		else
+//		{
+//			minusOffset = 0;
+//			printf("afcVal = %d \n",afcVal);
+//			printf("Minus AFC adjust limit of %f reached  adjust offset in ini file\n",minusOffsetLmit);
+//		}
 
-		if(plusOffset < plusOffsetLmit)
-		{
-			if(afcVal > 400)
-			{
-				printf("afcVal = %d \n",afcVal);
-				plusOffset = plusOffset + 50;
-				adjustedFreq = modem->eth.freq + modem->eth.freqofs + plusOffset;
-				setFrequency(getSPID(),adjustedFreq);
-				printf("*********AFC +50\n");
-			}
-		}
-		else
-		{
-			plusOffset = 0;
-			printf("afcVal = %d \n",afcVal);
-			printf("Plus AFC adjust limit of %f reached  adjust offset in ini file\n",plusOffsetLmit);
-		}
+//	    LNA = readRegister(modem->spid, REG_LNA);
+//	    printf("LNA3 %x\n",LNA);
 
-		if(minusOffset > minusOffsetLmit)
-		{
-			if(afcVal < -400)
-			{
-				printf("afcVal = %d \n",afcVal);
-				minusOffset = minusOffset - 50;
-				adjustedFreq = modem->eth.freq + modem->eth.freqofs + minusOffset;
-				setFrequency(getSPID(),adjustedFreq);
-				printf("*********AFC -50\n");
-			}
-
-		}
-		else
-		{
-			minusOffset = 0;
-			printf("afcVal = %d \n",afcVal);
-			printf("Minus AFC adjust limit of %f reached  adjust offset in ini file\n",minusOffsetLmit);
-		}
+		//printf("end\n");
 
 		switch(rxThreadData.buf[0])
 		{
@@ -179,9 +187,11 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 		}
 	}//if(RSSI < 97.00)
 
-    writeRegister(modem->spid,REG_OP_MODE, FSK_STANDBY_MODE);
+
+    //writeRegister(modem->spid,REG_OP_MODE, FSK_STANDBY_MODE);
     clearIRQFlags(modem->spid);
-    writeRegister(modem->spid,REG_OP_MODE, FSK_RX_MODE);
+    //writeRegister(modem->spid,REG_OP_MODE, FSK_RX_MODE);
+
 	//printf("end\n");
 }
 
@@ -254,8 +264,8 @@ int modemSetup(dictionary *ini)
 	modem.eth.resetGpioN      = iniparser_getint(ini,"modem:resetGpioN",4);
 	modem.eth.freq            = iniparser_getint(ini,"modem:freq",434500000);
 	modem.eth.freqofs         = iniparser_getint(ini,"modem:offset",0);
-	modem.eth.agcbw           = 12500;
-	modem.eth.rxbw            = 200000;
+	modem.eth.afcbw           = 31300;
+	modem.eth.rxbw            = 20800;
 
 
 	status = resetChip(modem.eth.resetGpioN);
@@ -296,10 +306,10 @@ int modemSetup(dictionary *ini)
 	temp = getBitrate(modem.spid);
 	printf("Bit Rate %f\n",temp);
 
-	status = setAFCBandwidth(modem.spid,modem.eth.agcbw);
+	status = setAFCBandwidth(modem.spid,modem.eth.afcbw);
 	if(status != 1)
 	{
-		printf("Setting AFC bandwidth %d Hz FAILED\n", modem.eth.agcbw);
+		printf("Setting AFC bandwidth %d Hz FAILED\n", modem.eth.afcbw);
 		return status;
 	}
 
@@ -336,8 +346,8 @@ int modemSetup(dictionary *ini)
 		return status;
 	}
 
-	status = setPreambleDetect(modem.spid,0xA8);
-	//status = sx1278fsk.setPreambleDetect(modem->spid,0x8A);
+	//tatus = setPreambleDetect(modem.spid,0xA8);
+	status = setPreambleDetect(modem.spid,0xAA);
 	if(status != 1)
 	{
 		printf("Setting PreambleDetect FAILED\n");
@@ -353,7 +363,7 @@ int modemSetup(dictionary *ini)
 		return status;
 	}
 
-	status = setFrequency(modem.spid,modem.eth.freq + modem.eth.freqofs);
+	status = setFrequency(modem.spid,modem.eth.freq);
 	if(status != 1)
 	{
 		//printf("Setting freq %f FAILED\n", tempFreq);

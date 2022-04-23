@@ -49,8 +49,8 @@ void *rxThreadFunc(void *x_void_ptr)
 
 		while(rxQ->size > 0)
 		{
-			pthread_mutex_lock (&rxQmut);
 			memset( &rxThreadQData, '\0', sizeof(rxThreadQData) );
+			pthread_mutex_lock (&rxQmut);
 			QStatus = Dequeue(rxQ,&rxThreadQData);
 			pthread_mutex_unlock (&rxQmut);
 
@@ -132,8 +132,8 @@ int rxQueuePacket(struct rxThreadDataType rxThreadData)
 //	printf("\n");
 	pthread_mutex_lock (&rxQmut);
 	QStatus = Enqueue(rxQ, rxQData);
-	pthread_cond_signal(&rxQcon);
 	pthread_mutex_unlock (&rxQmut);
+	pthread_cond_signal(&rxQcon);
 
 	return QStatus;
 }
