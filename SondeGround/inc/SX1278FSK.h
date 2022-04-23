@@ -168,7 +168,7 @@ typedef struct
     uint8_t resetGpioN;//raspberry GPIO pin connected to RESET pin of the chip
     uint8_t dio0GpioN;//raspberry GPIO pin connected to DIO0 pin of the chip to detect TX and Rx done events.
     float bps;
-    int agcbw;
+    int afcbw;
     int rxbw;
     unsigned int preambleLen;
 } FSKModemConfigType;
