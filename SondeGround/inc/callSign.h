@@ -1,7 +1,15 @@
-#ifndef HAB_CALL_SIGN_H
-#define HAB_CALL_SIGN_H
+/*
+ * callSign.h
+ *
+ *  Created on: Feb 5, 2022
+ *      Author: eswiech
+ */
 
+#ifndef INC_CALLSIGN_H_
+#define INC_CALLSIGN_H_
 
-int processCallSignPacket(unsigned char * infoPacket, int len);
+#include "ecc.h"
 
-#endif
+int processCallSign(struct rscode_driver *rsDriver);
+
+#endif /* INC_CALLSIGN_H_ */

@@ -1,6 +1,16 @@
-#ifndef HAB_BATT_INFO_H
-#define HAB_BATT_INFO_H
+/*
+ * batt.h
+ *
+ *  Created on: Feb 5, 2022
+ *      Author: eswiech
+ */
 
-int processBattInfoDataPacket(unsigned char * infoPacket, int len);
+#ifndef INC_BATT_H_
+#define INC_BATT_H_
 
-#endif
+#include "stm32f1xx_hal.h"
+#include "ecc.h"
+
+int processBattery(struct rscode_driver *rsDriver,ADC_HandleTypeDef* hadc);
+
+#endif /* INC_BATT_H_ */

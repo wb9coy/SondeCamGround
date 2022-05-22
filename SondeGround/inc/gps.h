@@ -1,10 +1,25 @@
-#ifndef GPS_H
-#define GPS_H
+/*
+ * gps.h
+ *
+ *  Created on: Feb 5, 2022
+ *      Author: eswiech
+ */
+
+#ifndef INC_GPS_H_
+#define INC_GPS_H_
+
+#include "stm32f1xx_hal.h"
+
+#define GPS_UART_BUF_DATA_SIZE    80
+#define UART_DATA_SIZE 		     300
+
+typedef enum
+{
+  GPS_OK    	= 0x00U,
+  GPS_FAIL	 	= 0x01U
+} GPS_StatusTypeDef;
+
+GPS_StatusTypeDef processGPS(UART_HandleTypeDef *huart);
 
 
-int processGPSPacket(unsigned char * GPSPacket, int len, int packetType);
-int validateNMEAChecksum(char *buf, int len);
-int getLastGGA(uint8_t buf[]);
-int getLastRMC(uint8_t buf[]);
-
-#endif
+#endif /* INC_GPS_H_ */

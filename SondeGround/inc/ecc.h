@@ -53,6 +53,8 @@ extern "C" {
 #define NPAR 8
 #endif
 
+#define NERASURES (NPAR/2-4)
+
 #include <inttypes.h>
 
 #define TRUE  (1)
@@ -89,12 +91,11 @@ struct rscode_driver {
 #endif
 };
 
-void rscode_init();
-struct rscode_driver * getRSCodeDriver();
-void rscode_encode(unsigned char *msg, int nbytes, unsigned char *dst);
-int rscode_decode(unsigned char *data, int nbytes);
+void rscode_init(struct rscode_driver * driver);
+void rscode_encode(struct rscode_driver * driver, unsigned char *msg, int nbytes, unsigned char *dst);
+int rscode_decode(struct rscode_driver * driver, unsigned char *data, int nbytes);
 #ifndef RSCODE_DISABLE_ERASURES_FUNCTIONS
-int rscode_decode_with_erasures(unsigned char *data, int nbytes, int nerasures, int * erasures);
+int rscode_decode_with_erasures(struct rscode_driver * driver, unsigned char *data, int nbytes, int nerasures, int * erasures);
 #endif
 
 #ifdef __cplusplus
