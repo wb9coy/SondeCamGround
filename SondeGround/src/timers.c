@@ -59,7 +59,7 @@ int setupTimers()
 {
 	printf("Setup Timers \n");
 
-	makeTimer(&statusTimerID,5);
+	makeTimer(&statusTimerID,10);
 
 	return 1;
 

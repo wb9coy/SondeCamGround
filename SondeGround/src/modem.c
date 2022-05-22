@@ -6,6 +6,7 @@
 #include "packetDefs.h"
 #include "utils.h"
 #include <unistd.h>
+#include "statusThread.h"
 
 static GFSK_ctl modem;
 struct rxThreadDataType rxThreadData;
@@ -19,6 +20,8 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
     GFSK_ctl *modem = (GFSK_ctl *)modemptr;
 	int goodPacket = 1;
 	int status     = 1;
+
+	//uint8_t st0;
 
 //	float adjustedFreq        = 0;
 //	int32_t afcVal;
@@ -174,6 +177,7 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 
 		if(goodPacket)
 		{
+			setAtivityFlag();
 //			rxThreadData.rssi = modem->rx.rssi;
 //			rxThreadData.size = modem->rx.data.size;
 //			memcpy(rxThreadData.buf,modem->rx.data.buf,rxThreadData.size);
@@ -185,12 +189,17 @@ void rxDoneISRf(int gpio_n, int level, uint32_t tick, void *modemptr)
 //			pthread_create(&(modem->rx.cbThread), NULL, startRxCallback, (void *)(modem));
 //			pthread_join(modem->rx.cbThread,NULL);
 		}
-	}//if(RSSI < 97.00)
+	}//if(RSSI < 105.00)
 
 
     //writeRegister(modem->spid,REG_OP_MODE, FSK_STANDBY_MODE);
+//	st0 = readRegister(modem->spid,REG_OP_MODE);
+//	printf("modemReceive 2 %d\n",st0);
+
+//	st0 = readRegister(modem->spid,REG_OP_MODE);
+//	printf("modemReceive 2 %d\n",st0);
     clearIRQFlags(modem->spid);
-    //writeRegister(modem->spid,REG_OP_MODE, FSK_RX_MODE);
+    writeRegister(modem->spid,REG_OP_MODE, FSK_RX_MODE);
 
 	//printf("end\n");
 }
@@ -220,16 +229,17 @@ int modemReceive(GFSK_ctl *modem)
 //	sx1278fsk.writeRegister(modem->spid, REG_PACKET_CONFIG1, 0x09);
 //	sx1278fsk.writeRegister(modem->spid, 0x27, 0xC8);
 
+	writeRegister(modem->spid, REG_OP_MODE, FSK_RX_MODE);
 	st0 = readRegister(modem->spid,REG_OP_MODE);
-	printf("modemReceive 1 %d\n",st0);
+	printf("REG_OP_MODE %d\n",st0);
 
 	//sx1278fsk.writeRegister(modem->spid, REG_SEQ_CONFIG1, 0x40);
 
-	writeRegister(modem->spid, REG_OP_MODE, FSK_RX_MODE);
-	writeRegister(modem->spid, REG_OP_MODE, FSK_RX_MODE);
+	//writeRegister(modem->spid, REG_OP_MODE, FSK_RX_MODE);
+	//writeRegister(modem->spid, REG_OP_MODE, FSK_RX_MODE);
 
-	st0 = readRegister(modem->spid,REG_OP_MODE);
-	printf("modemReceive 2 %d\n",st0);
+//	st0 = readRegister(modem->spid,REG_OP_MODE);
+//	printf("REG_OP_MODE %d\n",st0);
 
 	return status;
 }
@@ -240,6 +250,7 @@ int modemSetup(dictionary *ini)
 	float temp;
 	uint8_t sync;
 	int maxCurrent;
+	uint8_t st0;
 
     if (gpioInitialise() < 0)
     {
@@ -267,7 +278,7 @@ int modemSetup(dictionary *ini)
 	modem.eth.afcbw           = 31300;
 	modem.eth.rxbw            = 20800;
 
-
+	printf("resetChip\n");
 	status = resetChip(modem.eth.resetGpioN);
 	if(status != 1)
 	{
@@ -363,6 +374,10 @@ int modemSetup(dictionary *ini)
 		return status;
 	}
 
+	st0 = readRegister(modem.spid,REG_OP_MODE);
+	printf("REG_OP_MODE %d\n",st0);
+
+	writeRegister(modem.spid, REG_OP_MODE, FSK_STANDBY_MODE);
 	status = setFrequency(modem.spid,modem.eth.freq);
 	if(status != 1)
 	{
