@@ -104,7 +104,7 @@ void createLogDirectories()
 void createImageFilePathName()
 {
 
-	  sprintf (imageFilePathName, "%s/image%d.jpg", imageFileLogDir,imageFileID);
+	  sprintf (imageFilePathName, "%s/image%03d.jpg", imageFileLogDir,imageFileID);
 }
 
 char * getImageFilePathName()
@@ -115,7 +115,7 @@ char * getImageFilePathName()
 void createImageSeqFilePathName()
 {
 
-	  sprintf (imageSeqFilePathName, "%s/image%dGW_%d.seq", imageSeqLogDir,imageFileID,gwID);
+	  sprintf (imageSeqFilePathName, "%s/image%03dGW_%d.seq", imageSeqLogDir,imageFileID,gwID);
 }
 
 char * getImageSeqFilePathName()

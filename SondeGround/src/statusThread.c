@@ -21,7 +21,7 @@ static pthread_mutex_t  statusConMut = PTHREAD_MUTEX_INITIALIZER;
 void *statusThreadFunc(void *x_void_ptr)
 {
 	int result             = 1;
-	uint8_t st0;
+	//uint8_t st0;
 
 	QelementData statusQData;
 
@@ -40,12 +40,12 @@ void *statusThreadFunc(void *x_void_ptr)
 		if(activityFlag == 0)
 		{
 			writeRegister(getSPID(),REG_OP_MODE, FSK_STANDBY_MODE);
-			st0 = readRegister(getSPID(),REG_OP_MODE);
-			printf("REG_OP_MODE %d\n",st0);
+			//st0 = readRegister(getSPID(),REG_OP_MODE);
+			//printf("REG_OP_MODE %d\n",st0);
 
 			writeRegister(getSPID(),REG_OP_MODE, FSK_RX_MODE);
-			st0 = readRegister(getSPID(),REG_OP_MODE);
-			printf("REG_OP_MODE %d\n",st0);
+			//st0 = readRegister(getSPID(),REG_OP_MODE);
+			//printf("REG_OP_MODE %d\n",st0);
 		}
 
 		activityFlag = 0;

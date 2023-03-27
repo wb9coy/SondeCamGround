@@ -162,7 +162,7 @@ int processPressurePacket(unsigned char * sensorPacket, int len, int packetType)
 
 		if(result)
 		{
-			sprintf((char *)webHABPacketData.webData,"$PRES %.1fPa", HABPacketPressureInfoData.pressureInfoData);
+			sprintf((char *)webHABPacketData.webData,"$PRES %.1fhPa", HABPacketPressureInfoData.pressureInfoData);
 			sensorQData.len = strlen((const char *)webHABPacketData.webData);
 			if(sensorQData.len > sizeof(webHABPacketData.webData))
 			{
